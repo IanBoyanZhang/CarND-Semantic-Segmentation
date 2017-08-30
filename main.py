@@ -42,22 +42,25 @@ def load_vgg(sess, vgg_path):
     vgg_layer7_out_tensor = default_graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
     return vgg_input_tensor, vgg_keep_prob_tensor, vgg_layer3_out_tensor, vgg_layer4_out_tentor, vgg_layer7_out_tensor
 tests.test_load_vgg(load_vgg, tf)
-#
-#
-# def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
-#     """
-#     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
-#     :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
-#     :param vgg_layer4_out: TF Tensor for VGG Layer 4 output
-#     :param vgg_layer3_out: TF Tensor for VGG Layer 7 output
-#     :param num_classes: Number of classes to classify
-#     :return: The Tensor for the last layer of output
-#     """
-#     # TODO: Implement function
-#     return None
+
+
+def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
+    """
+    Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
+    :param vgg_layer7_out: TF Tensor for VGG Layer 3 output
+    :param vgg_layer4_out: TF Tensor for VGG Layer 4 output
+    :param vgg_layer3_out: TF Tensor for VGG Layer 7 output
+    :param num_classes: Number of classes to classify
+    :return: The Tensor for the last layer of output
+    """
+    # TODO: Implement function
+    # Skip layer
+    # Upsampling/Decoder?
+    # tf.layers.conv2d_transpose()
+    return None
 # tests.test_layers(layers)
-#
-#
+
+
 # def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
 #     """
 #     Build the TensorFLow loss and optimizer operations.
@@ -91,6 +94,50 @@ tests.test_load_vgg(load_vgg, tf)
 #     pass
 # tests.test_train_nn(train_nn)
 
+    # more NN helper function
+# Mostly bilinear interpolation
+def get_deconv_filter(f_shape):
+    width = f_shape[0]
+    height = f_shape[1]
+    f = ceil(width/2.0)
+    c = (2 * f - 1 - f % 2) / (2.0 * f)
+    bilinear = np.zeros([f_shape[0], f_shape[1]])
+    for x in range(width):
+        for y in range(height):
+            value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+            bilinear[x, y] = value
+    weights = np.zeros(f_shape)
+    for i in range(f_shape[2]):
+        weights[:, :, i, i] = bilinear
+
+    init = tf.constant_initializer(value=weights, dtype=tf.float32)
+    var = tf.get_variable(name="up_filter", initializer=init, shape=weights.shape)
+    return var
+
+def _upsample_layer(bottom, shape, num_classes, name, debug,
+                    ksize=4, stride=2):
+    strides = [1, stride, stride, 1]
+    with tf.variable_scope(name):
+        in_features = bottom.get_shape()[3].value
+
+        if shape is None:
+    #         compute shape out of bottom
+            in_shape = tf.shape(bottom)
+            h = ((in_shape[1] - 1) * stride) + 1
+            w = ((in_shape[2] - 1) * stride) + 1
+            new_shape = [shape[0], h, w, num_classes]
+        else
+            new_shape = [shape[0], shape[1], shape[2], num_classes]
+
+        output_shape = tf.stack(new_shape)
+
+        f_shape = [ksize, ksize, num_classes, in_features]
+
+        weights = get_deconv_filter(f_shape)
+        deconv = tf.nn.conv2d_transpose(bottom, weights, output_shape,
+                                        stride=strides, padding='SAME')
+        helper._activation_summary(deconv)
+    return deconv
 
 def run():
     num_classes = 2
@@ -106,6 +153,9 @@ def run():
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
+    # Hyperparameters
+    batch_size = 6
+
     with tf.Session() as sess:
         # Path to vgg model
         vgg_path = os.path.join(data_dir, 'vgg')
@@ -116,10 +166,21 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        load_vgg(sess, vgg_path);
-    #
-    #     # TODO: Train NN using the train_nn function
-    #
+        input_t, keep_prob_t, layer3_out_t, layer4_out_t, layer7_out_t = load_vgg(sess, vgg_path);
+        layers(layer3_out_t, layer4_out_t, layer7_out_t, num_classes)
+
+        # Tensor summary
+        # Seems for now the summary doesn't work
+        helper._activation_summary(input_t)
+        helper._activation_summary(keep_prob_t)
+
+        # TODO: Train NN using the train_nn function
+    #     Try loading the new data now
+        gen = get_batches_fn(batch_size)
+        for batch_x, batch_y in gen:
+            print(batch_x, batch_y)
+
+        # sess.run()
     #     # TODO: Save inference data using helper.save_inference_samples
     #     #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
     #

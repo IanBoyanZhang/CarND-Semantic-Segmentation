@@ -23,3 +23,24 @@ I'm working on semantic segmentation project and following steps were used to bu
 However, when I test it against testing data set, the result was not visually appealing (attached two samples).
 
 Obviously, I can increase the number of epochs, other than that what are some tricks I can use to increase the quality of the output?
+
+
+Question
+
+1. From the test cases it appears that layer3 has 256 channels, layer4 has 512 channels, and layer7 has 4096 channels. However looking at the VGG paper: https://arxiv.org/pdf/1409.1556.pdf, layer3 and 4 should have 128 channels and layer 7 should have 256 channels?
+2. If layer7 has 4096 channels would that means it is the output of a fully-connected layer? There is no FC layer in FCN right?
+
+Answer
+
+
+ng et al. changed the original VGG-16, what they call conv7  is actually convolutionalized fc7 - see https://arxiv.org/pdf/1411.4038.pdf page 5.
+
+https://discussions.udacity.com/t/what-is-the-output-layer-of-the-pre-trained-vgg16-to-be-fed-to-layers-project/327033/16
+
+By looking at the pre-trained weights, the pretrained VGG16 has already had the 1x1 convolution layers
+'
+
+Using tensorboard:
+ tensorboard --logdir=log/
+
+ localhost:6006
