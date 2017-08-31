@@ -5,6 +5,7 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
+import numpy as np
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -16,6 +17,105 @@ if not tf.test.gpu_device_name():
 else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
+#----------------------------------------------------------
+#  more NN helper function
+#----------------------------------------------------------
+# Mostly bilinear interpolation
+def _variable_with_weight_decay(shape, stddev, wd, decoder=False):
+    initializer = tf.truncated_normal_initializer(stddev=stddev)
+    var = tf.get_variable('weights', shape=shape, initializer=initializer)
+
+    if wd and (not tf.get_variable_scope().reuse):
+        weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
+        if not decoder:
+            tf.add_to_collection('losses', weight_decay)
+        else:
+            tf.add_to_collection('dec_losses', weight_decay)
+
+    # TODO: add variable_summary
+    return var
+
+def get_deconv_filter(f_shape):
+    width = f_shape[0]
+    height = f_shape[1]
+    # f = ceil(width/2.0)
+    f = width//2.0
+    c = (2 * f - 1 - f % 2) / (2.0 * f)
+    bilinear = np.zeros([f_shape[0], f_shape[1]])
+    for x in range(width):
+        for y in range(height):
+            value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+            bilinear[x, y] = value
+    weights = np.zeros(f_shape)
+    for i in range(f_shape[2]):
+        weights[:, :, i, i] = bilinear
+
+    init = tf.constant_initializer(value=weights, dtype=tf.float32)
+    var = tf.get_variable(name="up_filter", initializer=init, shape=weights.shape)
+    return var
+
+def _bias_variable(shape, constant=0.0):
+    initializer = tf.constant_initializer(constant)
+    var = tf.get_variable(name='biases', shape=shape, initializer=initializer)
+
+    # TODO: variable summary
+    return var
+
+def _score_layer(bottom, name, num_classes):
+    with tf.variable_scope(name) as scope:
+        # get number of input channels
+        in_features = bottom.get_shape()[3].value
+        shape = [1, 1, in_features, num_classes]
+
+        # What is stddev for?
+        if name == 'score_fr':
+            num_input = in_features
+            stddev = (2/num_input)**0.5
+        elif name == 'pool4':
+            stddev = 1e-3
+        elif name == 'pool3':
+            stddev = 1e-4
+        # Apply convolution
+
+        # Hyperparameter
+        w_decay = 5e-4
+
+        weights = _variable_with_weight_decay(shape, stddev, w_decay, decoder=True)
+        conv = tf.nn.conv2d(bottom, weights, [1, 1, 1, 1], padding='SAME')
+
+        conv_biases = _bias_variable([num_classes], constant=0.0)
+        bias = tf.nn.bias_add(conv, conv_biases)
+    return bias
+
+def _upsample_layer(bottom, shape, num_classes, name, debug,
+                    ksize=4, stride=2):
+    strides = [1, stride, stride, 1]
+    with tf.variable_scope(name) as scope:
+        in_features = bottom.get_shape()[3].value
+
+        if shape is None:
+    #         compute shape out of bottom
+            in_shape = tf.shape(bottom)
+            h = ((in_shape[1] - 1) * stride) + 1
+            w = ((in_shape[2] - 1) * stride) + 1
+            new_shape = [shape[0], h, w, num_classes]
+        else:
+            new_shape = [shape[0], shape[1], shape[2], num_classes]
+
+        output_shape = tf.stack(new_shape)
+
+        # What would we get from observing stddev?
+        f_shape = [ksize, ksize, num_classes, in_features]
+
+        weights = get_deconv_filter(f_shape)
+        deconv = tf.nn.conv2d_transpose(bottom, weights, output_shape,
+                                        strides=strides, padding='SAME')
+        helper._activation_summary(deconv)
+    return deconv
+
+#----------------------------------------------------------
+#  end of NN helper function
+#----------------------------------------------------------
 
 def load_vgg(sess, vgg_path):
     """
@@ -54,11 +154,39 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    # Skip layer
-    # Upsampling/Decoder?
-    # tf.layers.conv2d_transpose()
-    return None
-# tests.test_layers(layers)
+    # upsampled2 = _upsample_layer(vgg_layer7_out, shape=tf.shape(vgg_layer4_out),
+    #                              num_classes=num_classes, name="upsampled2", debug=False, ksize=4, stride=2)
+    # fuse_pool4 = tf.add(upsampled2, vgg_layer4_out)
+    #
+    # upsampled4 = _upsample_layer(fuse_pool4, shape=tf.shape(vgg_layer3_out), num_classes=num_classes, name="upsampled4",
+    #                              debug=False, ksize=16, stride=8)
+    # fuse_pool3 = tf.add(upsampled4, vgg_layer3_out)
+    # return tf.argmax(fuse_pool3, dimension=3)
+
+#     Using udacity dimensions
+    stddev = 0.01
+    initializer = tf.truncated_normal_initializer(stddev=stddev)
+    vgg_layer7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+
+    upsample_vgg_layer7 = tf.layers.conv2d_transpose(vgg_layer7, num_classes, 4, strides=(2, 2))
+
+    pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+    fcn_layer1 = tf.add(upsample_vgg_layer7, pool4)
+
+    # Add a 1x1 conv layer here?
+    fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2))
+
+    vgg_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+    combined_layer2 = tf.add(vgg_layer3, fcn_layer2)
+
+    upscore32 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8))
+
+
+    # logits = tf.reshape(upscore32, (-1, num_classes))
+    # return logits
+    return upscore32
+
+tests.test_layers(layers)
 
 
 # def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
@@ -94,50 +222,9 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 #     pass
 # tests.test_train_nn(train_nn)
 
-    # more NN helper function
-# Mostly bilinear interpolation
-def get_deconv_filter(f_shape):
-    width = f_shape[0]
-    height = f_shape[1]
-    f = ceil(width/2.0)
-    c = (2 * f - 1 - f % 2) / (2.0 * f)
-    bilinear = np.zeros([f_shape[0], f_shape[1]])
-    for x in range(width):
-        for y in range(height):
-            value = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
-            bilinear[x, y] = value
-    weights = np.zeros(f_shape)
-    for i in range(f_shape[2]):
-        weights[:, :, i, i] = bilinear
 
-    init = tf.constant_initializer(value=weights, dtype=tf.float32)
-    var = tf.get_variable(name="up_filter", initializer=init, shape=weights.shape)
-    return var
 
-def _upsample_layer(bottom, shape, num_classes, name, debug,
-                    ksize=4, stride=2):
-    strides = [1, stride, stride, 1]
-    with tf.variable_scope(name):
-        in_features = bottom.get_shape()[3].value
 
-        if shape is None:
-    #         compute shape out of bottom
-            in_shape = tf.shape(bottom)
-            h = ((in_shape[1] - 1) * stride) + 1
-            w = ((in_shape[2] - 1) * stride) + 1
-            new_shape = [shape[0], h, w, num_classes]
-        else
-            new_shape = [shape[0], shape[1], shape[2], num_classes]
-
-        output_shape = tf.stack(new_shape)
-
-        f_shape = [ksize, ksize, num_classes, in_features]
-
-        weights = get_deconv_filter(f_shape)
-        deconv = tf.nn.conv2d_transpose(bottom, weights, output_shape,
-                                        stride=strides, padding='SAME')
-        helper._activation_summary(deconv)
-    return deconv
 
 def run():
     num_classes = 2
@@ -171,8 +258,8 @@ def run():
 
         # Tensor summary
         # Seems for now the summary doesn't work
-        helper._activation_summary(input_t)
-        helper._activation_summary(keep_prob_t)
+        # helper._activation_summary(input_t)
+        # helper._activation_summary(keep_prob_t)
 
         # TODO: Train NN using the train_nn function
     #     Try loading the new data now

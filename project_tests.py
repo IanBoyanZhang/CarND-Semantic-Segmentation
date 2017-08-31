@@ -34,6 +34,7 @@ def _assert_tensor_shape(tensor, shape, display_name):
 
     wrong_dimension = [ten_dim for ten_dim, cor_dim in zip(tensor_shape, shape)
                        if cor_dim is not None and ten_dim != cor_dim]
+
     assert not wrong_dimension, \
         '{} has wrong shape.  Found {}'.format(display_name, tensor_shape)
 
