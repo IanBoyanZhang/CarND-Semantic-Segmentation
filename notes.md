@@ -44,3 +44,7 @@ Using tensorboard:
  tensorboard --logdir=log/
 
  localhost:6006
+
+Implementation references:
+
+[Marvin Teichmann FCN8 VGG](https://github.com/MarvinTeichmann/tensorflow-fcn/blob/master/fcn8_vgg.py)

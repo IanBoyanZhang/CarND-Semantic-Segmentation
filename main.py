@@ -180,29 +180,31 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     combined_layer2 = tf.add(vgg_layer3, fcn_layer2)
 
     upscore32 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8))
-
-
-    # logits = tf.reshape(upscore32, (-1, num_classes))
-    # return logits
     return upscore32
 
 tests.test_layers(layers)
 
 
-# def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
-#     """
-#     Build the TensorFLow loss and optimizer operations.
-#     :param nn_last_layer: TF Tensor of the last layer in the neural network
-#     :param correct_label: TF Placeholder for the correct label image
-#     :param learning_rate: TF Placeholder for the learning rate
-#     :param num_classes: Number of classes to classify
-#     :return: Tuple of (logits, train_op, cross_entropy_loss)
-#     """
-#     # TODO: Implement function
-#     return None, None, None
-# tests.test_optimize(optimize)
-#
-#
+def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
+    """
+    Build the TensorFLow loss and optimizer operations.
+    :param nn_last_layer: TF Tensor of the last layer in the neural network
+    :param correct_label: TF Placeholder for the correct label image
+    :param learning_rate: TF Placeholder for the learning rate
+    :param num_classes: Number of classes to classify
+    :return: Tuple of (logits, train_op, cross_entropy_loss)
+    """
+    # TODO: Implement function
+    logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits,
+                                                                                labels=correct_label))
+    train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss,
+                                                              global_step=tf.train.get_global_step())
+    return logits, train_op, cross_entropy_loss
+    # return None, None, None
+tests.test_optimize(optimize)
+
+
 # def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
 #              correct_label, keep_prob, learning_rate):
 #     """
@@ -222,10 +224,6 @@ tests.test_layers(layers)
 #     pass
 # tests.test_train_nn(train_nn)
 
-
-
-
-
 def run():
     num_classes = 2
     image_shape = (160, 576)
@@ -242,6 +240,7 @@ def run():
 
     # Hyperparameters
     batch_size = 6
+    learning_rate = 1e-5
 
     with tf.Session() as sess:
         # Path to vgg model
@@ -254,7 +253,10 @@ def run():
 
         # TODO: Build NN using load_vgg, layers, and optimize function
         input_t, keep_prob_t, layer3_out_t, layer4_out_t, layer7_out_t = load_vgg(sess, vgg_path);
-        layers(layer3_out_t, layer4_out_t, layer7_out_t, num_classes)
+        nn_last_layer = layers(layer3_out_t, layer4_out_t, layer7_out_t, num_classes)
+
+        correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
+        optimize(nn_last_layer, correct_label, num_classes, num_classes)
 
         # Tensor summary
         # Seems for now the summary doesn't work
@@ -263,9 +265,9 @@ def run():
 
         # TODO: Train NN using the train_nn function
     #     Try loading the new data now
-        gen = get_batches_fn(batch_size)
-        for batch_x, batch_y in gen:
-            print(batch_x, batch_y)
+    #     gen = get_batches_fn(batch_size)
+    #     for batch_x, batch_y in gen:
+    #         print(batch_x, batch_y)
 
         # sess.run()
     #     # TODO: Save inference data using helper.save_inference_samples
