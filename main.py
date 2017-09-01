@@ -5,8 +5,6 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
-import numpy as np
-
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
 print('TensorFlow Version: {}'.format(tf.__version__))
@@ -71,38 +69,29 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     vgg_layer7_conv1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=(1, 1),
                                           kernel_initializer=initializer, padding='same',
                                           kernel_regularizer=l2_regularizier)
-
-    output = tf.layers.conv2d_transpose(vgg_layer7_conv1x1, num_classes, 4, strides=(2, 2),
-                                        padding='same', kernel_regularizer=l2_regularizier)
-
+    vgg_layer3_conv1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1),
+                                          kernel_initializer=initializer, padding='same',
+                                          kernel_regularizer=l2_regularizier)
     pool4_conv1x1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1),
                                      kernel_initializer=initializer, padding='same',
                                      kernel_regularizer=l2_regularizier)
 
+    output = tf.layers.conv2d_transpose(vgg_layer7_conv1x1, num_classes, 4, strides=(2, 2),
+                                        padding='same', kernel_regularizer=l2_regularizier)
+
     fcn_layer1 = tf.add(output, pool4_conv1x1)
+
     fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2),
                                             padding='same', kernel_regularizer=l2_regularizier)
 
-    vgg_layer3_conv1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1),
-                                          kernel_initializer=initializer, padding='same',
-                                          kernel_regularizer=l2_regularizier)
-
     combined_layer2 = tf.add(vgg_layer3_conv1x1, fcn_layer2)
+
     fcn8 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8),
                                       padding='same', kernel_regularizer=l2_regularizier)
 
+    # TODO:
+    # tf.Print(output, [tf.shape(output)[1:3]])
 
-#     pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
-#     fcn_layer1 = tf.add(upsample_vgg_layer7, pool4)
-#
-#     # Add a 1x1 conv layer here?
-#     fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2))
-#
-#     vgg_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
-#     combined_layer2 = tf.add(vgg_layer3, fcn_layer2)
-#
-#     upscore32 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8))
-#     Official layers
     return fcn8
 
 tests.test_layers(layers)
@@ -118,7 +107,9 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     :return: Tuple of (logits, train_op, cross_entropy_loss)
     """
     # TODO: Implement function
+    # Reshape 4D to 2D
     logits = tf.reshape(nn_last_layer, (-1, num_classes))
+    correct_label = tf.reshape(correct_label, (-1, num_classes))
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits,
                                                                                 labels=correct_label))
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss,
@@ -173,11 +164,8 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     # Hyperparameters
-    batch_size = 6
-    learning_rate = 1e-5
     epochs = 10
     batch_size = 8
-    keep_prob = 0.5
 
     with tf.Session() as sess:
         # Path to vgg model
@@ -189,25 +177,23 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        input_t, keep_prob_t, layer3_out_t, layer4_out_t, layer7_out_t = load_vgg(sess, vgg_path);
+        input_t, keep_prob_t, layer3_out_t, layer4_out_t, layer7_out_t = load_vgg(sess, vgg_path)
         nn_last_layer = layers(layer3_out_t, layer4_out_t, layer7_out_t, num_classes)
 
         correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
-        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, num_classes, num_classes)
+        learning_rate = tf.placeholder(tf.float32)
+        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
-
-        # Tensor summary
         # TODO: Train NN using the train_nn function
-    #     Try loading the new data now
-    #     gen = get_batches_fn(batch_size)
-    #     for batch_x, batch_y in gen:
-    #         print(batch_x, batch_y)
+        # TODO: make input_image tensor_variable
+        train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_t,
+                 correct_label, keep_prob_t, learning_rate)
 
-        # sess.run()
-    #     # TODO: Save inference data using helper.save_inference_samples
-    #     #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
-    #
-    #     # OPTIONAL: Apply the trained model to a video
+
+        # TODO: Save inference data using helper.save_inference_samples
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob_t, input_t)
+
+        # OPTIONAL: Apply the trained model to a video
 
 
 if __name__ == '__main__':
