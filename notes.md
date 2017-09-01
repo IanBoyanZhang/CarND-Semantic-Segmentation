@@ -48,3 +48,5 @@ Using tensorboard:
 Implementation references:
 
 [Marvin Teichmann FCN8 VGG](https://github.com/MarvinTeichmann/tensorflow-fcn/blob/master/fcn8_vgg.py)
+
+[VOC fcn8s](https://github.com/shelhamer/fcn.berkeleyvision.org/blob/master/voc-fcn8s/net.py)
