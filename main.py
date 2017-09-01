@@ -187,9 +187,21 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                           kernel_regularizer=l2_regularizier)
 
     combined_layer2 = tf.add(vgg_layer3_conv1x1, fcn_layer2)
-    fcn8 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 4, strides=(2, 2),
-                                            padding='same', kernel_regularizer=l2_regularizier)
+    fcn8 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8),
+                                      padding='same', kernel_regularizer=l2_regularizier)
 
+
+#     pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+#     fcn_layer1 = tf.add(upsample_vgg_layer7, pool4)
+#
+#     # Add a 1x1 conv layer here?
+#     fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2))
+#
+#     vgg_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+#     combined_layer2 = tf.add(vgg_layer3, fcn_layer2)
+#
+#     upscore32 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8))
+#     Official layers
     return fcn8
 
 tests.test_layers(layers)
