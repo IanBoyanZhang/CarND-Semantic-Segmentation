@@ -15,6 +15,11 @@ if not tf.test.gpu_device_name():
 else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
+# Hyper parameters
+EPOCHS = 10
+BATCH_SIZE = 8
+KEEP_PROB = 0.5
+LEARNING_RATE = 0.001
 
 def load_vgg(sess, vgg_path):
     """
@@ -53,16 +58,6 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :return: The Tensor for the last layer of output
     """
     # TODO: Implement function
-    # upsampled2 = _upsample_layer(vgg_layer7_out, shape=tf.shape(vgg_layer4_out),
-    #                              num_classes=num_classes, name="upsampled2", debug=False, ksize=4, stride=2)
-    # fuse_pool4 = tf.add(upsampled2, vgg_layer4_out)
-    #
-    # upsampled4 = _upsample_layer(fuse_pool4, shape=tf.shape(vgg_layer3_out), num_classes=num_classes, name="upsampled4",
-    #                              debug=False, ksize=16, stride=8)
-    # fuse_pool3 = tf.add(upsampled4, vgg_layer3_out)
-    # return tf.argmax(fuse_pool3, dimension=3)
-
-#     Using udacity dimensions
     stddev = 0.01
     initializer = tf.truncated_normal_initializer(stddev=stddev)
     l2_regularizier = tf.contrib.layers.l2_regularizer(1e-3)
@@ -142,12 +137,13 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             feed = {
                 input_image: images,
                 correct_label: labels,
-                keep_prob: 0.5,
-                learning_rate: 0.001
+                keep_prob: KEEP_PROB,
+                learning_rate: LEARNING_RATE
             }
             _, out = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
     pass
 tests.test_train_nn(train_nn)
+
 
 def run():
     num_classes = 2
@@ -164,8 +160,8 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     # Hyperparameters
-    epochs = 10
-    batch_size = 8
+    epochs = EPOCHS
+    batch_size = BATCH_SIZE
 
     with tf.Session() as sess:
         # Path to vgg model
@@ -185,10 +181,8 @@ def run():
         logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
 
         # TODO: Train NN using the train_nn function
-        # TODO: make input_image tensor_variable
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_t,
                  correct_label, keep_prob_t, learning_rate)
-
 
         # TODO: Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob_t, input_t)
