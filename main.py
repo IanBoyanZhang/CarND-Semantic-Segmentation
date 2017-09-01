@@ -166,21 +166,31 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 #     Using udacity dimensions
     stddev = 0.01
     initializer = tf.truncated_normal_initializer(stddev=stddev)
-    vgg_layer7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
+    l2_regularizier = tf.contrib.layers.l2_regularizer(1e-3)
+    vgg_layer7_conv1x1 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides=(1, 1),
+                                          kernel_initializer=initializer, padding='same',
+                                          kernel_regularizer=l2_regularizier)
 
-    upsample_vgg_layer7 = tf.layers.conv2d_transpose(vgg_layer7, num_classes, 4, strides=(2, 2))
+    output = tf.layers.conv2d_transpose(vgg_layer7_conv1x1, num_classes, 4, strides=(2, 2),
+                                        padding='same', kernel_regularizer=l2_regularizier)
 
-    pool4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
-    fcn_layer1 = tf.add(upsample_vgg_layer7, pool4)
+    pool4_conv1x1 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides=(1, 1),
+                                     kernel_initializer=initializer, padding='same',
+                                     kernel_regularizer=l2_regularizier)
 
-    # Add a 1x1 conv layer here?
-    fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2))
+    fcn_layer1 = tf.add(output, pool4_conv1x1)
+    fcn_layer2 = tf.layers.conv2d_transpose(fcn_layer1, num_classes, 4, strides=(2, 2),
+                                            padding='same', kernel_regularizer=l2_regularizier)
 
-    vgg_layer3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1), kernel_initializer=initializer)
-    combined_layer2 = tf.add(vgg_layer3, fcn_layer2)
+    vgg_layer3_conv1x1 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides=(1, 1),
+                                          kernel_initializer=initializer, padding='same',
+                                          kernel_regularizer=l2_regularizier)
 
-    upscore32 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 16, strides=(8, 8))
-    return upscore32
+    combined_layer2 = tf.add(vgg_layer3_conv1x1, fcn_layer2)
+    fcn8 = tf.layers.conv2d_transpose(combined_layer2, num_classes, 4, strides=(2, 2),
+                                            padding='same', kernel_regularizer=l2_regularizier)
+
+    return fcn8
 
 tests.test_layers(layers)
 
@@ -201,7 +211,6 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(cross_entropy_loss,
                                                               global_step=tf.train.get_global_step())
     return logits, train_op, cross_entropy_loss
-    # return None, None, None
 tests.test_optimize(optimize)
 
 
@@ -241,6 +250,9 @@ def run():
     # Hyperparameters
     batch_size = 6
     learning_rate = 1e-5
+    epochs = 10
+    batch_size = 8
+    # keep_prob = 0.1
 
     with tf.Session() as sess:
         # Path to vgg model
