@@ -143,10 +143,19 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     # TODO: Implement function
-    for epoch in epochs:
-        for image, label in get_batches_fn(batch_size):
-
-    return 0
+    sess.run(tf.global_variables_initializer())
+    # https://discussions.udacity.com/t/implementation-of-train-nn/347885/5
+    # keep_prob and learning rate hack
+    for epoch in range(epochs):
+        for images, labels in get_batches_fn(batch_size):
+            feed = {
+                input_image: images,
+                correct_label: labels,
+                keep_prob: 0.5,
+                learning_rate: 0.001
+            }
+            _, out = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
+    pass
 tests.test_train_nn(train_nn)
 
 def run():
@@ -168,7 +177,7 @@ def run():
     learning_rate = 1e-5
     epochs = 10
     batch_size = 8
-    # keep_prob = 0.1
+    keep_prob = 0.5
 
     with tf.Session() as sess:
         # Path to vgg model
@@ -184,13 +193,10 @@ def run():
         nn_last_layer = layers(layer3_out_t, layer4_out_t, layer7_out_t, num_classes)
 
         correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
-        optimize(nn_last_layer, correct_label, num_classes, num_classes)
+        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, num_classes, num_classes)
+
 
         # Tensor summary
-        # Seems for now the summary doesn't work
-        # helper._activation_summary(input_t)
-        # helper._activation_summary(keep_prob_t)
-
         # TODO: Train NN using the train_nn function
     #     Try loading the new data now
     #     gen = get_batches_fn(batch_size)
