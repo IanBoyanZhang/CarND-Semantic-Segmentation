@@ -47,10 +47,10 @@ run 1504383727.2657874
     
     0.047683913
     
-![Skip layer idea as illustrated](./doc/skip_layers.png =250x100)
+<img src="./doc/skip_layers.png" alt="Skip layer ideas" style="width: 200px;"/>
 
-![FCN8](./doc/fcn8.png =250x100)
-    
+<img src="./doc/fcn8.png" alt="FCN8" style="width: 200px;"/>
+
 TODO: Using TensorBoard to visualize network and training results in each stages
 
 TODO: Experimenting optimization
