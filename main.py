@@ -17,7 +17,7 @@ else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
 # Hyper parameters
-EPOCHS = 8
+EPOCHS = 25
 BATCH_SIZE = 8
 KEEP_PROB = 0.40
 LEARNING_RATE = 0.001

@@ -9,8 +9,52 @@ run 1504373320.2554092
     KEEP_PROB = 0.5
     LEARNING_RATE = 0.001
     
-Loss is not recorded.
+    Loss is not recorded.
+
+run 1504378792.6229403
     
+    EPOCHS = 8
+    BATCH_SIZE = 8
+    KEEP_PROB = 0.75
+    LEARNING_RATE = 0.001
+    
+     0.23218602
+    
+run 1504379772.298715
+
+    EPOCHS = 8
+    BATCH_SIZE = 8
+    KEEP_PROB = 0.40
+    LEARNING_RATE = 0.001
+    
+    0.184747636
+    
+run 1504381343.1226273
+
+    EPOCHS = 25
+    BATCH_SIZE = 8
+    KEEP_PROB = 0.40
+    LEARNING_RATE = 0.001
+    
+    0.103782199
+    
+run 1504383727.2657874
+
+    EPOCHS = 40
+    BATCH_SIZE = 8 
+    KEEP_PROB = 0.75
+    LEARNING_RATE = 0.0001
+    
+    0.047683913
+    
+![Skip layer idea as illustrated](./doc/skip_layers.png)
+
+![FCN8](./doc/fcn8.png)
+    
+TODO: Using TensorBoard to visualize network and training results in each stages
+
+TODO: Experimenting optimization
+
 ### Introduction
 In this project, you'll label the pixels of a road in images using a Fully Convolutional Network (FCN).
 
