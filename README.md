@@ -4,7 +4,7 @@
 
 run 1504373320.2554092
 
-    EPOCHS = 10
+    EPOCHS = 20
     BATCH_SIZE = 8
     KEEP_PROB = 0.5
     LEARNING_RATE = 0.001
