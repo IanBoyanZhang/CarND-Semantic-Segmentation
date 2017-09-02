@@ -47,7 +47,7 @@ run 1504383727.2657874
     
     0.047683913
     
-<img src="./doc/skip_layers.png" alt="Skip layer ideas" style="width: 200px;"/>
+<img src="./doc/skip_layers.png" alt="Skip layer ideas" style="width: 100px;"/>
 
 <img src="./doc/fcn8.png" alt="FCN8" style="width: 200px;"/>
 
