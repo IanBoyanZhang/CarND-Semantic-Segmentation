@@ -17,9 +17,9 @@ else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
 # Hyper parameters
-EPOCHS = 10
+EPOCHS = 8
 BATCH_SIZE = 8
-KEEP_PROB = 0.5
+KEEP_PROB = 0.75
 LEARNING_RATE = 0.001
 
 NOW = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
