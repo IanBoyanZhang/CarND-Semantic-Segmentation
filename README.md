@@ -1,4 +1,16 @@
 # Semantic Segmentation
+
+### Experiments
+
+run 1504373320.2554092
+
+    EPOCHS = 10
+    BATCH_SIZE = 8
+    KEEP_PROB = 0.5
+    LEARNING_RATE = 0.001
+    
+Loss is not recorded.
+    
 ### Introduction
 In this project, you'll label the pixels of a road in images using a Fully Convolutional Network (FCN).
 

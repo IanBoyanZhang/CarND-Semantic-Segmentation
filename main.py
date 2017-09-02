@@ -4,6 +4,7 @@ import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
+import datetime
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -20,6 +21,8 @@ EPOCHS = 10
 BATCH_SIZE = 8
 KEEP_PROB = 0.5
 LEARNING_RATE = 0.001
+
+NOW = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def load_vgg(sess, vgg_path):
     """
@@ -133,6 +136,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     # https://discussions.udacity.com/t/implementation-of-train-nn/347885/5
     # keep_prob and learning rate hack
     for epoch in range(epochs):
+        index = 0
         for images, labels in get_batches_fn(batch_size):
             feed = {
                 input_image: images,
@@ -140,7 +144,10 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 keep_prob: KEEP_PROB,
                 learning_rate: LEARNING_RATE
             }
-            _, out = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
+            index += 1
+            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
+            with open(NOW, 'w') as file:
+                file.write("Epoch:", '%04d | ' % (index+1), "cost =", "{:.9f}".format(loss))
     pass
 tests.test_train_nn(train_nn)
 
