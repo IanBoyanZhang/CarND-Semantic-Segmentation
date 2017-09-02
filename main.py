@@ -135,8 +135,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     sess.run(tf.global_variables_initializer())
     # https://discussions.udacity.com/t/implementation-of-train-nn/347885/5
     # keep_prob and learning rate hack
+    index = 0
     for epoch in range(epochs):
-        index = 0
+        index += 1
         for images, labels in get_batches_fn(batch_size):
             feed = {
                 input_image: images,
@@ -144,7 +145,6 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 keep_prob: KEEP_PROB,
                 learning_rate: LEARNING_RATE
             }
-            index += 1
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
             # with open(NOW, 'w') as file:
             #     file.write("Epoch:", '%04d | ' % (index+1), "cost =", "{:.9f}".format(loss))
