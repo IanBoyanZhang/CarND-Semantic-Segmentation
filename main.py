@@ -19,7 +19,7 @@ else:
 # Hyper parameters
 EPOCHS = 8
 BATCH_SIZE = 8
-KEEP_PROB = 0.75
+KEEP_PROB = 0.40
 LEARNING_RATE = 0.001
 
 NOW = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
