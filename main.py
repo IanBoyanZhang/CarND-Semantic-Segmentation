@@ -146,8 +146,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             }
             index += 1
             _, loss = sess.run([train_op, cross_entropy_loss], feed_dict=feed)
-            with open(NOW, 'w') as file:
-                file.write("Epoch:", '%04d | ' % (index+1), "cost =", "{:.9f}".format(loss))
+            # with open(NOW, 'w') as file:
+            #     file.write("Epoch:", '%04d | ' % (index+1), "cost =", "{:.9f}".format(loss))
+            print("Epoch:", '%04d | ' % (index+1), "cost =", "{:.9f}".format(loss))
     pass
 tests.test_train_nn(train_nn)
 
